@@ -1,151 +1,149 @@
 import streamlit as st
 
-st.title("ACCA Overhead Absorption Calculator & Explainer")
-st.write("An interactive tool to understand and calculate overhead absorption, based on the ACCA F2/MA and PM syllabus.")
+st.set_page_config(
+    page_title="UK GAAP (FRS 102) Inventory Valuation Tool",
+    layout="wide"
+)
 
-st.header("1. Input Budgeted Data")
-st.write("Enter your company's planned financial and operational figures.")
+st.title("UK GAAP (FRS 102) Inventory Valuation Tool")
+st.markdown("""
+A professional tool for preparing finished goods inventory valuation, with audit considerations in mind. This model adheres to the principles of **FRS 102** for cost determination and provides a clear audit trail as required by **ISA (UK) 500**.
+""")
 
-# --- Input Section ---
-col1, col2, col3 = st.columns(3)
+st.subheader("Accountant's Rationale and Method Selection")
+st.markdown("""
+As per **FRS 102, Section 13**, inventory must be valued at the lower of cost and net realisable value. The 'cost' of finished goods includes all costs of purchase, costs of conversion, and other costs incurred in bringing the inventories to their present location and condition. This model focuses on the cost of conversion by systematically absorbing production overheads.
 
+The selected overhead absorption basis (e.g., machine hours, labor hours) must be **'systematic and rational'** to be compliant.
+""")
+
+# --- Step 1: Define Cost Components ---
+st.header("1. Input Direct Costs (Cost Per Unit)")
+st.write("Enter the prime cost components for a single unit of production.")
+col1, col2 = st.columns(2)
 with col1:
-    budgeted_fixed_oh = st.number_input(
-        "Budgeted Fixed Overheads ($)", 
+    direct_materials = st.number_input(
+        "Direct Materials per Unit ($)", 
+        min_value=0.0, 
+        value=10.00,
+        step=0.01
+    )
+with col2:
+    direct_labour = st.number_input(
+        "Direct Labour per Unit ($)", 
+        min_value=0.0, 
+        value=15.00,
+        step=0.01
+    )
+
+st.subheader("Prime Cost")
+prime_cost = direct_materials + direct_labour
+st.metric("Prime Cost per Unit", f"${prime_cost:,.2f}")
+
+# --- Step 2: Overhead Absorption Parameters ---
+st.header("2. Overhead Absorption Parameters")
+st.write("Determine the Overhead Absorption Rate (OAR) using budgeted figures.")
+col3, col4, col5 = st.columns(3)
+with col3:
+    budgeted_oh = st.number_input(
+        "Budgeted Production Overheads ($)", 
         min_value=0, 
         value=120000,
         step=1000
     )
-with col2:
-    budgeted_activity_level = st.number_input(
+with col4:
+    budgeted_activity = st.number_input(
         "Budgeted Activity Level (e.g., Machine Hours)", 
         min_value=1, 
         value=30000,
         step=100
     )
-with col3:
-    budgeted_units = st.number_input(
-        "Budgeted Units of Production", 
-        min_value=1, 
-        value=20000,
-        step=100
-    )
-
-st.header("2. Input Actual Data")
-st.write("Enter the figures for the actual period.")
-
-col4, col5, col6 = st.columns(3)
-with col4:
-    actual_fixed_oh = st.number_input(
-        "Actual Fixed Overheads ($)", 
-        min_value=0, 
-        value=125000,
-        step=1000
-    )
 with col5:
-    actual_activity_level = st.number_input(
-        "Actual Activity Level (e.g., Machine Hours)", 
-        min_value=1, 
-        value=31000,
-        step=100
+    activity_type = st.selectbox(
+        "Activity Type",
+        options=["Machine Hours", "Direct Labour Hours", "Units Produced"]
     )
-with col6:
-    actual_units = st.number_input(
-        "Actual Units of Production", 
-        min_value=1, 
-        value=21000,
-        step=100
-    )
+st.markdown(f"**Justification:** The use of {activity_type} as the absorption basis is considered **'systematic and rational'** as it is a primary driver of the overhead costs in the production process.")
 
-st.divider()
-
-# --- Calculations Section ---
-st.header("3. Calculations & Results")
-st.write("Here are the step-by-step calculations, just like you would perform in an ACCA exam.")
-
+# --- Calculations ---
 try:
-    # Calculation 1: Overhead Absorption Rate (OAR)
-    oar_per_activity = budgeted_fixed_oh / budgeted_activity_level
-    st.subheader("Step 3a: Overhead Absorption Rate (OAR)")
-    st.metric(
-        label="OAR per Activity Unit",
-        value=f"${oar_per_activity:,.2f} per hour",
-        help="This is the predetermined rate for absorbing overheads. It's calculated using budgeted figures."
-    )
-    st.latex(f"OAR = \\frac{{\\text{{Budgeted Fixed Overheads}}}}{{\\text{{Budgeted Activity Level}}}} = \\frac{{\\${budgeted_fixed_oh:,}}}{{\\text{{{budgeted_activity_level:,} hours}}}} = \\${oar_per_activity:,.2f}")
+    oar = budgeted_oh / budgeted_activity
+    st.subheader("Calculated Overhead Absorption Rate (OAR)")
+    st.metric("OAR", f"${oar:,.2f} per {activity_type.lower()}")
     
-    # Calculation 2: Total Absorbed Overheads
-    absorbed_oh = actual_activity_level * oar_per_activity
-    st.subheader("Step 3b: Total Absorbed Overheads")
-    st.metric(
-        label="Total Overheads Absorbed",
-        value=f"${absorbed_oh:,.2f}",
-        help="The amount of overheads charged to production, based on actual activity and the OAR."
-    )
-    st.latex(f"\\text{{Absorbed Overheads}} = \\text{{Actual Activity}} \\times \\text{{OAR}} = \\text{{{actual_activity_level:,} hours}} \\times \\${oar_per_activity:,.2f} = \\${absorbed_oh:,.2f}")
+    st.latex(f"OAR = \\frac{{\\text{{Budgeted Overheads}}}}{{\\text{{Budgeted Activity}}}} = \\frac{{\\${budgeted_oh:,}}}{{\\text{{{budgeted_activity:,} {activity_type.lower()}}}}} = \\${oar:,.2f}")
 
-    # Calculation 3: Over or Under Absorption
-    over_under_absorption = absorbed_oh - actual_fixed_oh
-    st.subheader("Step 3c: Over/Under Absorption")
+    # --- Step 3: Inventory & Valuation ---
+    st.header("3. Inventory Valuation")
+    st.write("Input the final production figures and closing inventory count.")
+    col6, col7, col8 = st.columns(3)
+    with col6:
+        activity_per_unit = st.number_input(
+            f"{activity_type} per Unit", 
+            min_value=0.0, 
+            value=1.5,
+            step=0.1
+        )
+    with col7:
+        closing_inventory = st.number_input(
+            "Closing Finished Goods Inventory (Units)", 
+            min_value=0, 
+            value=1000,
+            step=10
+        )
+    with col8:
+        st.write("---")
+        absorbed_oh_per_unit = oar * activity_per_unit
+        total_full_cost_per_unit = prime_cost + absorbed_oh_per_unit
+        st.metric("Full Cost Per Unit", f"${total_full_cost_per_unit:,.2f}")
+
+    st.divider()
+
+    st.header("4. Final Inventory Valuation for Financial Statements")
+    total_inventory_value = closing_inventory * total_full_cost_per_unit
+    st.success(f"**Total Closing Inventory Value: ${total_inventory_value:,.2f}**")
+    
+    st.markdown("""
+        **Audit Documentation:** This figure is to be reported in the Statement of Financial Position (Balance Sheet). As per **ISA (UK) 500**, this calculation provides the audit evidence for the valuation of finished goods inventory. The consistent application of a 'systematic and rational' absorption basis satisfies the auditor's requirement for a reliable cost figure.
+    """)
+
+    # --- Over/Under Absorption Check for Audit Trail ---
+    st.header("5. Audit Check: Over/Under Absorption")
+    st.write("A critical step to reconcile total overheads and identify potential material variances.")
+    col9, col10 = st.columns(2)
+    with col9:
+        actual_oh = st.number_input(
+            "Actual Total Production Overheads ($)", 
+            min_value=0, 
+            value=125000,
+            step=1000
+        )
+    with col10:
+        actual_activity = st.number_input(
+            f"Actual Total {activity_type}", 
+            min_value=0, 
+            value=31000,
+            step=100
+        )
+    
+    absorbed_oh_total = actual_activity * oar
+    over_under_absorption = absorbed_oh_total - actual_oh
     
     if over_under_absorption > 0:
-        st.success(f"Over-absorbed Overheads: ${over_under_absorption:,.2f}")
-        st.write("This is a favorable result, as more overheads were absorbed than were actually incurred.")
+        st.info(f"**Total Over-Absorbed Overheads:** ${over_under_absorption:,.2f}")
+        st.write("This indicates the company absorbed more overheads than were actually incurred. This is generally a favourable variance.")
     elif over_under_absorption < 0:
-        st.error(f"Under-absorbed Overheads: ${-over_under_absorption:,.2f}")
-        st.write("This is an adverse result, as fewer overheads were absorbed than were actually incurred.")
+        st.warning(f"**Total Under-Absorbed Overheads:** ${-over_under_absorption:,.2f}")
+        st.write("This indicates the company absorbed fewer overheads than were actually incurred. This is an adverse variance.")
     else:
-        st.info("Exactly absorbed overheads. No variance.")
-    
-    st.latex(f"\\text{{Over/Under Absorption}} = \\text{{Absorbed Overheads}} - \\text{{Actual Overheads}} = \\${absorbed_oh:,.2f} - \\${actual_fixed_oh:,} = \\${over_under_absorption:,.2f}")
+        st.info("No over or under absorption.")
+        
+    st.markdown("""
+        **Required Audit Action:** Any material over/under absorption variance must be investigated. The figure is typically taken to the Statement of Profit or Loss as an adjustment to the cost of sales.
+    """)
+    st.latex(f"\\text{{Under/Over Absorption}} = (\\text{{Actual Activity}} \\times OAR) - \\text{{Actual Overheads}}")
+    st.latex(f"= (\\text{{{actual_activity:,}}} \\times \\${oar:,.2f}) - \\${actual_oh:,} = \\${over_under_absorption:,.2f}")
 
-    # --- Variance Analysis (ACCA PM) ---
-    st.header("4. ACCA PM Variance Analysis")
-    st.write("The total over/under absorption can be split into two key variances.")
-
-    # Variance 1: Fixed Overhead Expenditure Variance
-    expenditure_variance = budgeted_fixed_oh - actual_fixed_oh
-    if expenditure_variance >= 0:
-        exp_emoji = "🎉"
-        exp_text = "Favorable"
-    else:
-        exp_emoji = "😔"
-        exp_text = "Adverse"
-
-    st.subheader("Expenditure Variance")
-    st.write(f"The variance due to a difference between budgeted and actual spending on overheads.")
-    st.metric(
-        label=f"Fixed Overhead Expenditure Variance",
-        value=f"${abs(expenditure_variance):,.2f}",
-        delta_color="normal",
-        delta=exp_text
-    )
-
-    # Variance 2: Fixed Overhead Volume Variance
-    oar_per_unit = budgeted_fixed_oh / budgeted_units
-    volume_variance = (actual_units - budgeted_units) * oar_per_unit
-    if volume_variance >= 0:
-        vol_emoji = "🎉"
-        vol_text = "Favorable"
-    else:
-        vol_emoji = "😔"
-        vol_text = "Adverse"
-
-    st.subheader("Volume Variance")
-    st.write(f"The variance due to producing more or fewer units than budgeted.")
-    st.metric(
-        label=f"Fixed Overhead Volume Variance",
-        value=f"${abs(volume_variance):,.2f}",
-        delta_color="normal",
-        delta=vol_text
-    )
-
-    # Reconciliation
-    st.subheader("Reconciliation")
-    st.write("The two variances should reconcile with the total over/under absorption.")
-    st.info(f"Total Variance = Expenditure Variance + Volume Variance")
-    st.info(f"${over_under_absorption:,.2f} = ${expenditure_variance:,.2f} + ${volume_variance:,.2f}")
 
 except (ZeroDivisionError, ValueError):
     st.error("Please ensure all input values are greater than zero to perform calculations.")
-
